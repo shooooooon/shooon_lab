@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, json } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, json, uniqueIndex } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -50,6 +50,7 @@ export type InsertTag = typeof tags.$inferInsert;
 
 /**
  * Articles - ブログ記事
+ * #9: 外部キー制約を追加
  */
 export const articles = mysqlTable("articles", {
   id: int("id").autoincrement().primaryKey(),
@@ -58,8 +59,10 @@ export const articles = mysqlTable("articles", {
   excerpt: text("excerpt"),
   content: text("content").notNull(),
   coverImage: text("coverImage"),
-  authorId: int("authorId").notNull(),
-  seriesId: int("seriesId"),
+  // #9: 外部キー制約 - usersテーブルへの参照
+  authorId: int("authorId").notNull().references(() => users.id),
+  // #9: 外部キー制約 - seriesテーブルへの参照（削除時はnull化）
+  seriesId: int("seriesId").references(() => series.id, { onDelete: "set null" }),
   seriesOrder: int("seriesOrder"),
   weight: int("weight").default(0).notNull(), // 特集記事の重み（高いほど優先）
   status: mysqlEnum("status", ["draft", "published", "archived"]).default("draft").notNull(),
@@ -77,24 +80,35 @@ export type InsertArticle = typeof articles.$inferInsert;
 
 /**
  * ArticleTags - 記事とタグの中間テーブル
+ * #8: ユニーク制約を追加
+ * #9: 外部キー制約を追加
  */
 export const articleTags = mysqlTable("article_tags", {
   id: int("id").autoincrement().primaryKey(),
-  articleId: int("articleId").notNull(),
-  tagId: int("tagId").notNull(),
-});
+  // #9: 外部キー制約 - articlesテーブルへの参照（削除時はカスケード削除）
+  articleId: int("articleId").notNull().references(() => articles.id, { onDelete: "cascade" }),
+  // #9: 外部キー制約 - tagsテーブルへの参照（削除時はカスケード削除）
+  tagId: int("tagId").notNull().references(() => tags.id, { onDelete: "cascade" }),
+}, (table) => [
+  // #8: ユニーク制約 - 同じ記事に同じタグが重複しないように
+  uniqueIndex("article_tag_unique").on(table.articleId, table.tagId),
+]);
 
 export type ArticleTag = typeof articleTags.$inferSelect;
 export type InsertArticleTag = typeof articleTags.$inferInsert;
 
 /**
  * Comments - コメント（スレッド対応）
+ * #9: 外部キー制約を追加
  */
 export const comments = mysqlTable("comments", {
   id: int("id").autoincrement().primaryKey(),
-  articleId: int("articleId").notNull(),
-  authorId: int("authorId").notNull(),
-  parentId: int("parentId"), // 親コメントID（返信の場合）
+  // #9: 外部キー制約 - articlesテーブルへの参照（削除時はカスケード削除）
+  articleId: int("articleId").notNull().references(() => articles.id, { onDelete: "cascade" }),
+  // #9: 外部キー制約 - usersテーブルへの参照
+  authorId: int("authorId").notNull().references(() => users.id),
+  // 親コメントID（返信の場合）- 自己参照外部キーはDrizzleでは直接サポートされないため、アプリケーション層で管理
+  parentId: int("parentId"),
   content: text("content").notNull(),
   status: mysqlEnum("status", ["pending", "approved", "rejected"]).default("pending").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

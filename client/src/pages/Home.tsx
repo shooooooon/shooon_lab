@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect } from "react";
+import { ArticleCard } from "@/components/ArticleCard";
 
 // Featured Article Slider
 function FeaturedSlider() {
@@ -126,46 +127,7 @@ function FeaturedSlider() {
   );
 }
 
-// Article Card
-function ArticleCard({ article }: { article: any }) {
-  return (
-    <Link href={`/article/${article.slug}`}>
-      <Card className="article-card h-full overflow-hidden">
-        {article.coverImage && (
-          <div className="aspect-video overflow-hidden">
-            <img
-              src={article.coverImage}
-              alt={article.title}
-              className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-            />
-          </div>
-        )}
-        <CardContent className="p-4">
-          <h3 className="font-serif font-semibold text-lg mb-2 line-clamp-2 hover:text-primary transition-colors">
-            {article.title}
-          </h3>
-          {article.excerpt && (
-            <p className="text-muted-foreground text-sm line-clamp-2 mb-3">
-              {article.excerpt}
-            </p>
-          )}
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            {article.publishedAt && (
-              <span className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                {new Date(article.publishedAt).toLocaleDateString("ja-JP")}
-              </span>
-            )}
-            <span className="flex items-center gap-1">
-              <Eye className="h-3 w-3" />
-              {article.viewCount}
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
-  );
-}
+// #13: ArticleCardを共通コンポーネントに移動済み
 
 // Article List Skeleton
 function ArticleListSkeleton() {

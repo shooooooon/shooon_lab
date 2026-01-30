@@ -58,14 +58,20 @@ function AdminSidebar() {
   );
 }
 
-// Generate slug from title
+// #15: 日本語スラッグ対応 - 日本語タイトルの場合はnanoidでフォールバック
 function generateSlug(title: string): string {
-  return title
+  const slug = title
     .toLowerCase()
     .replace(/[^\w\s-]/g, "")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
     .trim();
+
+  // スラッグが空の場合（日本語タイトルなど）はタイムスタンプで自動生成
+  if (!slug) {
+    return `article-${Date.now().toString(36)}`;
+  }
+  return slug;
 }
 
 export default function AdminArticleEditor() {

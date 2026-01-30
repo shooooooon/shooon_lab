@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Streamdown } from "streamdown";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import CommentSection from "@/components/CommentSection";
 
 // Gallery Component
@@ -146,9 +146,17 @@ function ArticleSkeleton() {
 export default function Article() {
   const params = useParams<{ slug: string }>();
   const { data: article, isLoading, error } = trpc.articles.getBySlug.useQuery(
-    { slug: params.slug || "", incrementView: true },
+    { slug: params.slug || "" },
     { enabled: !!params.slug }
   );
+
+  // #2: ビューカウントのインクリメントを別のmutationに分離
+  const incrementViewMutation = trpc.articles.incrementView.useMutation();
+  useEffect(() => {
+    if (params.slug && article) {
+      incrementViewMutation.mutate({ slug: params.slug });
+    }
+  }, [params.slug, article?.id]);
 
   const handleShare = async () => {
     if (navigator.share) {

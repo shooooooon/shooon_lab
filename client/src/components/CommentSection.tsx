@@ -24,6 +24,8 @@ interface Comment {
   } | null;
 }
 
+type CommentWithReplies = Comment & { replies: CommentWithReplies[] };
+
 // Single Comment Component
 function CommentItem({
   comment,
@@ -161,9 +163,9 @@ function CommentForm({
 }
 
 // Build comment tree
-function buildCommentTree(comments: Comment[]): (Comment & { replies: Comment[] })[] {
-  const commentMap = new Map<number, Comment & { replies: Comment[] }>();
-  const rootComments: (Comment & { replies: Comment[] })[] = [];
+function buildCommentTree(comments: Comment[]): CommentWithReplies[] {
+  const commentMap = new Map<number, CommentWithReplies>();
+  const rootComments: CommentWithReplies[] = [];
 
   // Initialize all comments with empty replies array
   comments.forEach((comment) => {
@@ -183,24 +185,47 @@ function buildCommentTree(comments: Comment[]): (Comment & { replies: Comment[] 
   return rootComments;
 }
 
-// Recursive comment renderer
+// #4: 改善 - 返信フォームをCommentThread内に移動して子コメントへの返信も表示されるようにする
 function CommentThread({
   comment,
+  replyingTo,
   onReply,
+  onCancelReply,
+  onReplySuccess,
+  articleId,
   depth = 0,
 }: {
-  comment: Comment & { replies: Comment[] };
+  comment: CommentWithReplies;
+  replyingTo: number | null;
   onReply: (parentId: number) => void;
+  onCancelReply: () => void;
+  onReplySuccess: () => void;
+  articleId: number;
   depth?: number;
 }) {
   return (
     <>
       <CommentItem comment={comment} onReply={onReply} depth={depth} />
+      {/* 返信フォームを各コメントの直下に表示 */}
+      {replyingTo === comment.id && (
+        <div style={{ marginLeft: `${(depth + 1) * 2}rem` }} className="mb-4">
+          <CommentForm
+            articleId={articleId}
+            parentId={comment.id}
+            onCancel={onCancelReply}
+            onSuccess={onReplySuccess}
+          />
+        </div>
+      )}
       {comment.replies.map((reply) => (
         <CommentThread
           key={reply.id}
-          comment={reply as Comment & { replies: Comment[] }}
+          comment={reply}
+          replyingTo={replyingTo}
           onReply={onReply}
+          onCancelReply={onCancelReply}
+          onReplySuccess={onReplySuccess}
+          articleId={articleId}
           depth={depth + 1}
         />
       ))}
@@ -252,18 +277,12 @@ export default function CommentSection({ articleId }: CommentSectionProps) {
             <div key={comment.id}>
               <CommentThread
                 comment={comment}
+                replyingTo={replyingTo}
                 onReply={(parentId) => setReplyingTo(parentId)}
+                onCancelReply={() => setReplyingTo(null)}
+                onReplySuccess={() => setReplyingTo(null)}
+                articleId={articleId}
               />
-              {replyingTo === comment.id && (
-                <div className="ml-13 mb-4">
-                  <CommentForm
-                    articleId={articleId}
-                    parentId={comment.id}
-                    onCancel={() => setReplyingTo(null)}
-                    onSuccess={() => setReplyingTo(null)}
-                  />
-                </div>
-              )}
             </div>
           ))}
         </div>

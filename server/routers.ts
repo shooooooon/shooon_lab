@@ -1,18 +1,10 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, adminProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import * as db from "./db";
-
-// Admin check middleware
-const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "admin") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-  }
-  return next({ ctx });
-});
 
 export const appRouter = router({
   system: systemRouter,
@@ -136,9 +128,9 @@ export const appRouter = router({
 
   // ========== Articles API ==========
   articles: router({
+    // #17: 公開APIではstatusパラメータを受け付けず、常にpublishedのみ返す
     list: publicProcedure
       .input(z.object({
-        status: z.enum(["draft", "published", "archived"]).optional(),
         tagId: z.number().optional(),
         seriesId: z.number().optional(),
         year: z.number().optional(),
@@ -150,11 +142,12 @@ export const appRouter = router({
       .query(async ({ input }) => {
         const options = {
           ...input,
-          status: input?.status ?? "published" as const,
+          status: "published" as const, // 常に公開記事のみ
         };
         return db.getArticles(options);
       }),
     
+    // 管理者用: 全ステータスの記事を取得可能
     listAll: adminProcedure
       .input(z.object({
         status: z.enum(["draft", "published", "archived"]).optional(),
@@ -171,11 +164,17 @@ export const appRouter = router({
         return db.getFeaturedArticles(input?.limit ?? 5);
       }),
     
+    // #1: 未公開記事のアクセス制御 - 管理者以外は公開記事のみ閲覧可能
     getById: publicProcedure
       .input(z.object({ id: z.number() }))
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         const article = await db.getArticleById(input.id);
         if (!article) return null;
+        
+        // 管理者以外は公開記事のみ閲覧可能
+        if (article.status !== "published" && ctx.user?.role !== "admin") {
+          return null;
+        }
         
         const [articleTags, author, articleSeries] = await Promise.all([
           db.getArticleTags(article.id),
@@ -186,14 +185,16 @@ export const appRouter = router({
         return { ...article, tags: articleTags, author, series: articleSeries };
       }),
     
+    // #1: 未公開記事のアクセス制御
     getBySlug: publicProcedure
-      .input(z.object({ slug: z.string(), incrementView: z.boolean().default(false) }))
-      .query(async ({ input }) => {
+      .input(z.object({ slug: z.string() }))
+      .query(async ({ ctx, input }) => {
         const article = await db.getArticleBySlug(input.slug);
         if (!article) return null;
         
-        if (input.incrementView && article.status === "published") {
-          await db.incrementViewCount(article.id);
+        // 管理者以外は公開記事のみ閲覧可能
+        if (article.status !== "published" && ctx.user?.role !== "admin") {
+          return null;
         }
         
         const [articleTags, author, articleSeries] = await Promise.all([
@@ -203,6 +204,17 @@ export const appRouter = router({
         ]);
         
         return { ...article, tags: articleTags, author, series: articleSeries };
+      }),
+    
+    // #2: ビューカウントのインクリメントを別のmutationに分離
+    incrementView: publicProcedure
+      .input(z.object({ slug: z.string() }))
+      .mutation(async ({ input }) => {
+        const article = await db.getArticleBySlug(input.slug);
+        if (article && article.status === "published") {
+          await db.incrementViewCount(article.id);
+        }
+        return { success: true };
       }),
     
     create: adminProcedure
@@ -238,6 +250,7 @@ export const appRouter = router({
         return result;
       }),
     
+    // #3: as anyの型キャストを修正
     update: adminProcedure
       .input(z.object({
         id: z.number(),
@@ -257,13 +270,16 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const { id, tagIds, ...data } = input;
         
-        // 公開時にpublishedAtを設定
+        // 公開時にpublishedAtを設定（型安全に）
         const article = await db.getArticleById(id);
-        if (article && data.status === "published" && article.status !== "published") {
-          (data as any).publishedAt = new Date();
-        }
+        const updateData = {
+          ...data,
+          ...(data.status === "published" && article?.status !== "published"
+            ? { publishedAt: new Date() }
+            : {}),
+        };
         
-        await db.updateArticle(id, data);
+        await db.updateArticle(id, updateData);
         
         if (tagIds !== undefined) {
           await db.setArticleTags(id, tagIds);
@@ -282,51 +298,21 @@ export const appRouter = router({
 
   // ========== Comments API ==========
   comments: router({
+    // #6: N+1クエリ問題を解決 - JOINで一括取得
     listByArticle: publicProcedure
       .input(z.object({ articleId: z.number() }))
       .query(async ({ input }) => {
-        const commentsList = await db.getCommentsByArticle(input.articleId, false);
-        
-        // コメント作成者情報を取得
-        const commentsWithAuthor = await Promise.all(
-          commentsList.map(async (comment) => {
-            const author = await db.getUserById(comment.authorId);
-            return { ...comment, author };
-          })
-        );
-        
-        return commentsWithAuthor;
+        return db.getCommentsByArticleWithAuthor(input.articleId, false);
       }),
     
     listByArticleAdmin: adminProcedure
       .input(z.object({ articleId: z.number() }))
       .query(async ({ input }) => {
-        const commentsList = await db.getCommentsByArticle(input.articleId, true);
-        
-        const commentsWithAuthor = await Promise.all(
-          commentsList.map(async (comment) => {
-            const author = await db.getUserById(comment.authorId);
-            return { ...comment, author };
-          })
-        );
-        
-        return commentsWithAuthor;
+        return db.getCommentsByArticleWithAuthor(input.articleId, true);
       }),
     
     listPending: adminProcedure.query(async () => {
-      const commentsList = await db.getPendingComments();
-      
-      const commentsWithDetails = await Promise.all(
-        commentsList.map(async (comment) => {
-          const [author, article] = await Promise.all([
-            db.getUserById(comment.authorId),
-            db.getArticleById(comment.articleId),
-          ]);
-          return { ...comment, author, article };
-        })
-      );
-      
-      return commentsWithDetails;
+      return db.getPendingCommentsWithDetails();
     }),
     
     create: protectedProcedure
