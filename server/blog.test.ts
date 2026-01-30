@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
+import { NOT_ADMIN_ERR_MSG, UNAUTHED_ERR_MSG } from "@shared/const";
 
 // Mock user types
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
@@ -121,7 +122,7 @@ describe("Blog API", () => {
           slug: "test-series",
           title: "Test Series",
         })
-      ).rejects.toThrow();
+      ).rejects.toThrow(NOT_ADMIN_ERR_MSG);
     });
   });
 
@@ -148,7 +149,7 @@ describe("Blog API", () => {
           slug: "test-tag",
           name: "Test Tag",
         })
-      ).rejects.toThrow();
+      ).rejects.toThrow(NOT_ADMIN_ERR_MSG);
     });
   });
 
@@ -178,7 +179,7 @@ describe("Blog API", () => {
       const caller = appRouter.createCaller(ctx);
       await expect(
         caller.articles.listAll({ limit: 10 })
-      ).rejects.toThrow();
+      ).rejects.toThrow(NOT_ADMIN_ERR_MSG);
     });
 
     it("create requires admin", async () => {
@@ -190,7 +191,7 @@ describe("Blog API", () => {
           title: "Test Article",
           content: "Test content",
         })
-      ).rejects.toThrow();
+      ).rejects.toThrow(NOT_ADMIN_ERR_MSG);
     });
 
     it("delete requires admin", async () => {
@@ -198,7 +199,7 @@ describe("Blog API", () => {
       const caller = appRouter.createCaller(ctx);
       await expect(
         caller.articles.delete({ id: 1 })
-      ).rejects.toThrow();
+      ).rejects.toThrow(NOT_ADMIN_ERR_MSG);
     });
   });
 
@@ -218,13 +219,13 @@ describe("Blog API", () => {
           articleId: 1,
           content: "Test comment",
         })
-      ).rejects.toThrow();
+      ).rejects.toThrow(UNAUTHED_ERR_MSG);
     });
 
     it("listPending requires admin", async () => {
       const ctx = createUserContext();
       const caller = appRouter.createCaller(ctx);
-      await expect(caller.comments.listPending()).rejects.toThrow();
+      await expect(caller.comments.listPending()).rejects.toThrow(NOT_ADMIN_ERR_MSG);
     });
 
     it("approve requires admin", async () => {
@@ -232,7 +233,7 @@ describe("Blog API", () => {
       const caller = appRouter.createCaller(ctx);
       await expect(
         caller.comments.approve({ id: 1 })
-      ).rejects.toThrow();
+      ).rejects.toThrow(NOT_ADMIN_ERR_MSG);
     });
 
     it("reject requires admin", async () => {
@@ -240,7 +241,7 @@ describe("Blog API", () => {
       const caller = appRouter.createCaller(ctx);
       await expect(
         caller.comments.reject({ id: 1 })
-      ).rejects.toThrow();
+      ).rejects.toThrow(NOT_ADMIN_ERR_MSG);
     });
 
     it("delete requires admin", async () => {
@@ -248,7 +249,7 @@ describe("Blog API", () => {
       const caller = appRouter.createCaller(ctx);
       await expect(
         caller.comments.delete({ id: 1 })
-      ).rejects.toThrow();
+      ).rejects.toThrow(NOT_ADMIN_ERR_MSG);
     });
   });
 

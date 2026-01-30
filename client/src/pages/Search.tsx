@@ -1,11 +1,9 @@
 import Layout from "@/components/Layout";
 import { trpc } from "@/lib/trpc";
-import { Link } from "wouter";
-import { Search as SearchIcon, Calendar, Eye, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Search as SearchIcon, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import { useState, useEffect } from "react";
+import { ArticleCardHorizontal } from "@/components/ArticleCard";
 
 // Debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -24,37 +22,7 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-// Article Card
-function SearchResultCard({ article }: { article: any }) {
-  return (
-    <Link href={`/article/${article.slug}`}>
-      <Card className="article-card hover:border-primary/50 transition-colors">
-        <CardContent className="p-4">
-          <h3 className="font-serif font-semibold text-lg mb-2 hover:text-primary transition-colors">
-            {article.title}
-          </h3>
-          {article.excerpt && (
-            <p className="text-muted-foreground text-sm line-clamp-2 mb-3">
-              {article.excerpt}
-            </p>
-          )}
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            {article.publishedAt && (
-              <span className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                {new Date(article.publishedAt).toLocaleDateString("ja-JP")}
-              </span>
-            )}
-            <span className="flex items-center gap-1">
-              <Eye className="h-3 w-3" />
-              {article.viewCount}
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
-  );
-}
+// #B: ローカルのSearchResultCard定義を削除し、共通コンポーネントを使用
 
 export default function Search() {
   const [query, setQuery] = useState("");
@@ -114,7 +82,7 @@ export default function Search() {
             </p>
             <div className="space-y-4">
               {data.articles.map((article) => (
-                <SearchResultCard key={article.id} article={article} />
+                <ArticleCardHorizontal key={article.id} article={article} />
               ))}
             </div>
           </>
