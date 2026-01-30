@@ -1,13 +1,13 @@
 import Layout from "@/components/Layout";
 import { trpc } from "@/lib/trpc";
-import { Link, useSearch } from "wouter";
-import { Calendar, Eye, Tag, BookOpen, Filter, X } from "lucide-react";
+import { useSearch } from "wouter";
+import { Calendar, Tag, BookOpen, Filter, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState, useMemo } from "react";
+import { useState } from "react";
+import { ArticleCardHorizontal } from "@/components/ArticleCard";
 
 // Parse search params
 function useQueryParams() {
@@ -21,48 +21,7 @@ function useQueryParams() {
   };
 }
 
-// Article Card
-function ArticleCard({ article }: { article: any }) {
-  return (
-    <Link href={`/article/${article.slug}`}>
-      <Card className="article-card h-full overflow-hidden hover:border-primary/50 transition-colors">
-        <div className="flex flex-col sm:flex-row">
-          {article.coverImage && (
-            <div className="sm:w-48 aspect-video sm:aspect-square overflow-hidden flex-shrink-0">
-              <img
-                src={article.coverImage}
-                alt={article.title}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          )}
-          <CardContent className="p-4 flex-1">
-            <h3 className="font-serif font-semibold text-lg mb-2 line-clamp-2 hover:text-primary transition-colors">
-              {article.title}
-            </h3>
-            {article.excerpt && (
-              <p className="text-muted-foreground text-sm line-clamp-2 mb-3">
-                {article.excerpt}
-              </p>
-            )}
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              {article.publishedAt && (
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  {new Date(article.publishedAt).toLocaleDateString("ja-JP")}
-                </span>
-              )}
-              <span className="flex items-center gap-1">
-                <Eye className="h-3 w-3" />
-                {article.viewCount}
-              </span>
-            </div>
-          </CardContent>
-        </div>
-      </Card>
-    </Link>
-  );
-}
+// #B: ローカルのArticleCard定義を削除し、共通コンポーネントを使用
 
 // Filter Sidebar
 function FilterSidebar({
@@ -312,7 +271,7 @@ export default function Archive() {
               <>
                 <div className="space-y-4">
                   {articlesData.articles.map((article) => (
-                    <ArticleCard key={article.id} article={article} />
+                    <ArticleCardHorizontal key={article.id} article={article} />
                   ))}
                 </div>
 

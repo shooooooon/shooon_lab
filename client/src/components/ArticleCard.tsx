@@ -103,4 +103,47 @@ export function ArticleCardCompact({ article }: { article: ArticleItem }) {
   );
 }
 
+// #B: 横並びバリエーション（Archiveページ用）
+export function ArticleCardHorizontal({ article }: { article: ArticleItem }) {
+  return (
+    <article className="group">
+      <Link href={`/article/${article.slug}`}>
+        <div className="flex flex-col sm:flex-row gap-4 p-4 rounded-lg border border-border hover:border-primary/50 transition-colors">
+          {article.coverImage && (
+            <div className="sm:w-48 aspect-video sm:aspect-square overflow-hidden flex-shrink-0 rounded-lg">
+              <img
+                src={article.coverImage}
+                alt={article.title}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <h3 className="font-serif font-semibold text-lg mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+              {article.title}
+            </h3>
+            {article.excerpt && (
+              <p className="text-muted-foreground text-sm line-clamp-2 mb-3">
+                {article.excerpt}
+              </p>
+            )}
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              {article.publishedAt && (
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {new Date(article.publishedAt).toLocaleDateString("ja-JP")}
+                </span>
+              )}
+              <span className="flex items-center gap-1">
+                <Eye className="h-3 w-3" />
+                {article.viewCount}
+              </span>
+            </div>
+          </div>
+        </div>
+      </Link>
+    </article>
+  );
+}
+
 export default ArticleCard;

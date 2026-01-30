@@ -464,18 +464,23 @@ export async function getPendingComments() {
 }
 
 // ========== Archive Queries ==========
-// #16: 型キャストの改善
-export async function getArchiveYears() {
+// #16, #C: 型安全なgetArchiveYears - MySQLのonly_full_group_byモードに対応
+interface ArchiveYearRow {
+  year: number;
+  count: number;
+}
+
+export async function getArchiveYears(): Promise<ArchiveYearRow[]> {
   const db = getDbOrNull();
   if (!db) return [];
   
-  // Use raw SQL to avoid GROUP BY issues with MySQL's only_full_group_by mode
-  const result = await db.execute<{ year: number; count: number }[]>(
+  // MySQLのonly_full_group_byモードに対応するため、生のSELECTでエイリアスを使用
+  const result = await db.execute(
     sql`SELECT YEAR(publishedAt) as year, COUNT(*) as count FROM articles WHERE status = 'published' AND publishedAt IS NOT NULL GROUP BY YEAR(publishedAt) ORDER BY year DESC`
   );
   
-  // Result is in result[0] for mysql2
-  const rows = (result as unknown as [{ year: number; count: number }[]])[0];
+  // mysql2の結果は[rows, fields]の形式
+  const rows = (result as unknown as [ArchiveYearRow[], unknown])[0];
   return rows.filter(r => r.year !== null);
 }
 
