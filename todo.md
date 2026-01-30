@@ -98,3 +98,16 @@
 
 ### 低優先度
 - [x] #C: getArchiveYears型キャスト改善 - ArchiveYearRowインターフェース定義
+
+
+## CODE_REVIEW第2版（LaS8Mブランチ）改善項目
+
+### 高優先度
+- [x] #A: ビューカウント重複実行リスク - useRefでガード追加
+
+### 中優先度
+- [x] #B: Archive/SearchのArticleCard共通化 - ArticleCardHorizontal使用
+- [x] #D: テストアサーション強化 - NOT_ADMIN_ERR_MSG定数使用
+
+### 低優先度
+- [x] #C: getArchiveYears型キャスト改善 - ArchiveYearRowインターフェース定義
