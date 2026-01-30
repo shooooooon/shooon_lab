@@ -47,6 +47,7 @@ export async function setupVite(app: Express, server: Server) {
   });
 }
 
+// P12: 静的ファイルキャッシュヘッダー
 export function serveStatic(app: Express) {
   const distPath =
     process.env.NODE_ENV === "development"
@@ -58,7 +59,17 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  // Viteビルドのハッシュ付きアセットは長期キャッシュ
+  app.use("/assets", express.static(path.resolve(distPath, "assets"), {
+    maxAge: "1y",
+    immutable: true,
+  }));
+
+  // その他の静的ファイル
+  app.use(express.static(distPath, {
+    maxAge: "1h",
+    etag: true,
+  }));
 
   // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {

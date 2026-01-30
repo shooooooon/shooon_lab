@@ -42,7 +42,7 @@ export function getSessionCookieOptions(
   return {
     httpOnly: true,
     path: "/",
-    sameSite: "none",
+    sameSite: "lax",  // P4: CSRF対策のため"lax"に変更
     secure: isSecureRequest(req),
   };
 }

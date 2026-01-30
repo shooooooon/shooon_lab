@@ -18,7 +18,7 @@ function requireDb() {
   return db;
 }
 
-function getDbOrNull() {
+export function getDbOrNull() {
   return db;
 }
 
